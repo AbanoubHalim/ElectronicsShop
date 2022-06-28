@@ -27,5 +27,8 @@ namespace ElectronicsShop.Models
         [Required]
         public Guid CategoryId { get; set; }
         public virtual Category Category { get; set; }
+
+        public virtual Order Order { get; set; }
+        public virtual Discount Discount { get; set; }
     }
 }

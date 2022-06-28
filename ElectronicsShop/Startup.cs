@@ -1,7 +1,9 @@
 using ElectronicsShop.Models;
+using ElectronicsShop.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -30,10 +32,17 @@ namespace ElectronicsShop
         {
 
             services.AddControllers();
+            services.AddScoped<IOrderService, OrderService>();
+            services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<IProductService, ProductService>();
+            services.AddScoped<IDiscountService, DiscountService>();
+
             services.AddDbContext<ShopContext>(options => options
                .UseLazyLoadingProxies()
                .UseSqlServer(Configuration.GetConnectionString("SystemConnection")
            ));
+            
+            services.AddIdentity<ApplicationUser, IdentityRole>().AddEntityFrameworkStores<ShopContext>();
             services.AddCors();
             services.AddSwaggerGen(c =>
             {
@@ -52,9 +61,9 @@ namespace ElectronicsShop
             }
 
             app.UseHttpsRedirection();
-
+            app.UseDeveloperExceptionPage();
             app.UseRouting();
-
+            app.UseAuthentication();
             app.UseAuthorization();
             app.UseCors(builder =>
             {

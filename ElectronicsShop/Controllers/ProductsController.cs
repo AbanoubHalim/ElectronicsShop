@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ElectronicsShop.Models;
 using ElectronicsShop.DTOs;
+using ElectronicsShop.Services;
 
 namespace ElectronicsShop.Controllers
 {
@@ -14,92 +15,34 @@ namespace ElectronicsShop.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        private readonly ShopContext _context;
-
-        public ProductsController(ShopContext context)
+        private readonly IProductService productService;
+        public ProductsController(IProductService productService)
         {
-            _context = context;
+            this.productService = productService;
         }
+
 
         [HttpGet]
         public async Task<Result<List<Product>>> GetProduct()
         {
-            List<Product> allProducts = await _context.Product.ToListAsync();
-            return new Result<List<Product>>
-            {
-                Success = true,
-                ResponseObject = allProducts,
-            };
+            return await productService.GetProduct();
         }
         [HttpGet("ProductsPerCategory/{id}")]
         public async Task<Result<List<Product>>> ProductsPerCategory(Guid id)
         {
-            List<Product> allProducts = await _context.Product.Where(p=>p.CategoryId==id).ToListAsync();
-            return new Result<List<Product>>
-            {
-                Success = true,
-                ResponseObject = allProducts,
-            };
+            return await productService.ProductsPerCategory(id);
         }
 
         [HttpGet("{id}")]
         public async Task<Result<Product>> GetProduct(Guid id)
         {
-            var product = await _context.Product.FindAsync(id);
-
-            if (product == null)
-            {
-                return new Result<Product>
-                {
-                    Success = false,
-                    ResponseMessage = "There is no product with this id"
-                };
-            }
-
-            return new Result<Product>
-            {
-                Success = true,
-                ResponseObject=product
-            };
+            return await productService.GetProduct(id);
         }
 
         [HttpPut("{id}")]
         public async Task<Result<Product>> PutProduct(Guid id, Product product)
         {
-            var productData = await _context.Product.SingleOrDefaultAsync(p => p.Id == id);
-            try
-            {
-            if(productData==null)
-            {
-                return new Result<Product>
-                {
-                    Success = false,
-                    ResponseMessage = "There is no product for this id"
-                };
-            }
-            productData.Name = product.Name;
-            productData.PieceCount = product.PieceCount;
-            productData.Price = product.Price;
-            productData.Description = product.Description;
-            productData.CategoryId = product.CategoryId;
-            
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                return new Result<Product>
-                {
-                    Success=false,
-                    ResponseMessage=ex.Message
-                };
-            }
-
-            return new Result<Product>
-            {
-                Success = true,
-                ResponseMessage = "Product Updated Successfully",
-                ResponseObject=productData,
-            };
+            return await productService.PutProduct(id, product);
         }
 
         [HttpPost]
@@ -113,39 +56,13 @@ namespace ElectronicsShop.Controllers
                     ResponseMessage="Enter correct data and try again",
                 };
             }
-            product.Id = Guid.NewGuid();
-            _context.Product.Add(product);
-            await _context.SaveChangesAsync();
-
-            return new Result<Product>
-            {
-                Success = true,
-                ResponseMessage = "Product added Successfully",
-            };
+            return await productService.PostProduct(product);
         }
 
         [HttpDelete("{id}")]
         public async Task<Result<Product>> DeleteProduct(Guid id)
         {
-            var product = _context.Product.SingleOrDefault(p=>p.Id==id);
-            if (product == null)
-            {
-                return new Result<Product>
-                {
-                    Success = false,
-                    ResponseMessage = "There is no product with this  "
-                };
-            }
-
-            _context.Product.Remove(product);
-            await _context.SaveChangesAsync();
-
-            return new Result<Product>
-            {
-                Success = true,
-                ResponseObject = product,
-                ResponseMessage = "Product deleted Successfully"
-            };
+            return await productService.DeleteProduct(id);
         }
 
        

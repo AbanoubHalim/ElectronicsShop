@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ElectronicsShop.Models;
 using ElectronicsShop.DTOs;
+using ElectronicsShop.Services;
 
 namespace ElectronicsShop.Controllers
 {
@@ -14,43 +15,22 @@ namespace ElectronicsShop.Controllers
     [ApiController]
     public class CategoriesController : ControllerBase
     {
-        private readonly ShopContext _context;
-
-        public CategoriesController(ShopContext context)
+        private readonly ICategoryService categoryService;
+        public CategoriesController(ICategoryService categoryService)
         {
-            _context = context;
+            this.categoryService = categoryService;
         }
 
         [HttpGet]
         public async Task<Result<List<Category>>> GetCategory()
         {
-            List<Category> categories = await _context.Category.ToListAsync();
-            return new Result<List<Category>>
-            {
-                Success=true,
-                ResponseObject=categories,
-            };
+            return await categoryService.GetCategory();
         }
 
         [HttpGet("{id}")]
         public async Task<Result<Category>> GetCategory(Guid id)
         {
-            Category category = await _context.Category.FindAsync(id);
-
-            if (category == null)
-            {
-                return new Result<Category>
-                {
-                    ResponseMessage = "Sorry There is no category with this id",
-                    Success=false,
-                };
-            }
-
-            return new Result<Category>
-            {
-                ResponseObject=category,
-                Success=true,
-            };
+            return await categoryService.GetCategory(id);
         }
         
         [HttpPut("{id}")]
@@ -64,27 +44,7 @@ namespace ElectronicsShop.Controllers
                     ResponseMessage= "Enter correct data and try again"
                 };
             }
-            try
-            {
-                var categoryData = _context.Category.SingleOrDefault(c => c.CategoryId == id);
-                categoryData.Name = category.Name;
-                await _context.SaveChangesAsync();
-                
-            }
-            catch (Exception ex)
-            {
-                return new Result<Category>
-                {
-                    Success = false,
-                    ResponseMessage = ex.Message,
-                };
-            }
-
-            return new Result<Category>
-            {
-                Success = true,
-                ResponseMessage = "Category Update Successfuly",
-            };
+            return await categoryService.PutCategory(id, category);
         }
 
         [HttpPost]
@@ -98,48 +58,13 @@ namespace ElectronicsShop.Controllers
                     Success=false
                 };
             }
-            category.CategoryId = Guid.NewGuid();
-            _context.Category.Add(category);
-            await _context.SaveChangesAsync();
-
-            return new Result<Category>
-            {
-                ResponseMessage = "Category added successfully",
-                Success = true
-            };
+            return await categoryService.PostCategory(category);
         }
 
         [HttpDelete("{id}")]
         public async Task<Result<Category>> DeleteCategory(Guid id)
         {
-            var category = await _context.Category.FindAsync(id);
-            if (category == null)
-            {
-                return new Result<Category>
-                {
-                    Success = false,
-                    ResponseMessage="There is no category with this id "
-                };
-            }
-            try
-            {
-                _context.Category.Remove(category);
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                return new Result<Category>
-                {
-                    Success = false,
-                    ResponseMessage = ex.Message
-                };
-            }
-            return new Result<Category>
-            {
-                Success = true,
-                ResponseMessage = "Category Deleted Successfully",
-                ResponseObject=category
-            };
+            return await categoryService.DeleteCategory(id);
         }
 
         
