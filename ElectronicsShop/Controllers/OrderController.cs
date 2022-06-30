@@ -8,9 +8,11 @@ using Microsoft.EntityFrameworkCore;
 using ElectronicsShop.Models;
 using ElectronicsShop.DTOs;
 using ElectronicsShop.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ElectronicsShop.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class OrderController : ControllerBase
@@ -21,61 +23,77 @@ namespace ElectronicsShop.Controllers
         {
             this.orderService = orderService;
         }
-
+        [Authorize(Roles = "Admin")]
         [HttpGet]
-        public async Task<Result<List<Order>>> GetOrder()
+        public async Task<ActionResult<IEnumerable<Order>>> GetOrder()
         {
-            return await orderService.GetOrder();
+            return Ok(await orderService.GetOrder());
         }
-        [HttpGet("GetUSerOrders/{id}")]
-        public async Task<Result<List<Order>>> GetUSerOrders(Guid id)
+        [Authorize(Roles = "Admin")]
+        [HttpGet("GetUserOrders/{id}")]
+        public async Task<ActionResult<IEnumerable<Order>>> GetUserOrders(Guid id)
         {
-            return await orderService.GetUSerOrders(id);
-        }
-        // GET: api/Order/5
-        [HttpGet("{id}")]
-        public async Task<Result<Order>> GetOrder(Guid id)
-        {
-            return await orderService.GetOrder(id);
-        }
-
-        // PUT: api/Order/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<Result<Order>> PutOrder(Guid id, Order order)
-        {
-            if (!ModelState.IsValid)
+            var orders = await orderService.GetUserOrders(id);
+            if (!orders.Any())
             {
-                return new Result<Order>
-                {
-                    Success = false,
-                    ResponseMessage = "Enter correct Data and try again"
-                };
+                return NotFound();
             }
-            else
-                return await orderService.PutOrder(id, order);
+            return Ok(orders);
         }
 
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Order>> GetOrder(Guid id)
+        {
+            var order = await orderService.GetOrder(id);
+            if (order == null)
+            {
+                return NotFound();
+            }
+            return order;
+        }
+
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutOrder(Guid id, Order order)
+        {
+            var orderdata = await orderService.GetOrder(id);
+            if (orderdata == null)
+            {
+                return NotFound("Sorry this order is not exist");
+            }
+            else if (id != order.OrderId)
+            {
+                return BadRequest();
+            }          
+            await orderService.PutOrder(id, order);
+            return NoContent();
+        }
         
         [HttpPost]
-        public async Task<Result<Order>> PostOrder(Order order)
+        public async Task<ActionResult<Order>> PostOrder(Order order)
         {
             if (!ModelState.IsValid)
             {
-                return new Result<Order>
-                {
-                    Success = false,
-                    ResponseMessage = "Enter correct Data and try again"
-                };
+                return UnprocessableEntity(ModelState);
             }
-            else return await orderService.PostOrder(order);
+            else
+            {
+                await orderService.PostOrder(order);
+                return Ok(order);
+            }            
         }
 
         [HttpDelete("{id}")]
-        public async Task<Result<Order>> DeleteOrder(Guid id)
+        public async Task<IActionResult> DeleteOrder(Guid id)
         {
-            return await orderService.DeleteOrder(id);
+            var order= await orderService.GetOrder(id);
+            if (order == null)
+            {
+                return NotFound("Sorry this order is not exist");
+            }
+            await orderService.DeleteOrder(order);
+            return NoContent();
         }
-   
+        
     }
 }

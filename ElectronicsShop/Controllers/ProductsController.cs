@@ -8,9 +8,12 @@ using Microsoft.EntityFrameworkCore;
 using ElectronicsShop.Models;
 using ElectronicsShop.DTOs;
 using ElectronicsShop.Services;
+using ElectronicsShop.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ElectronicsShop.Controllers
 {
+
     [Route("api/[controller]")]
     [ApiController]
     public class ProductsController : ControllerBase
@@ -21,48 +24,100 @@ namespace ElectronicsShop.Controllers
             this.productService = productService;
         }
 
-
         [HttpGet]
-        public async Task<Result<List<Product>>> GetProduct()
+        public async Task<ActionResult<IEnumerable<Product>>> GetProduct(int pageIndex = 1)
         {
-            return await productService.GetProduct();
+            IEnumerable<Product> products= await productService.GetProduct();
+            if (products.Any())
+            {
+                const int pagesize = 5;
+                if (pageIndex < 1)
+                    pageIndex = 1;
+
+                var pager = new Pager(products.Count(), pageIndex, pagesize);
+                int recSkip = (pageIndex - 1) * pagesize;
+
+                var productssData = products.Skip(recSkip).Take(pager.PageSize).ToList();
+                return Ok(productssData);
+            }
+            else
+            {
+                return Ok(products);
+            }
+             
         }
+
         [HttpGet("ProductsPerCategory/{id}")]
-        public async Task<Result<List<Product>>> ProductsPerCategory(Guid id)
+        public async Task<ActionResult<IEnumerable<Product>>> ProductsPerCategory(Guid id)
         {
-            return await productService.ProductsPerCategory(id);
+            var products = await productService.ProductsPerCategory(id);
+            if (!products.Any())
+            {
+                return NotFound("There is no product in this category");
+            }
+            return Ok(products);
+
+             
         }
 
         [HttpGet("{id}")]
-        public async Task<Result<Product>> GetProduct(Guid id)
+        public async Task<ActionResult<Product>> GetProduct(Guid id)
         {
-            return await productService.GetProduct(id);
+            var product = await productService.GetProduct(id);
+            if (product == null)
+            {
+                return NotFound();
+            }
+            return product;
         }
 
+        [Authorize(Roles ="admin")]
         [HttpPut("{id}")]
-        public async Task<Result<Product>> PutProduct(Guid id, Product product)
+        public async Task<IActionResult> PutProduct(Guid id, Product product)
         {
-            return await productService.PutProduct(id, product);
+            var productdata = await productService.GetProduct(id);
+            if (productdata == null)
+            {
+                return NotFound("Sorry this product is not exist");
+            }
+            else if (id != product.Id)
+            {
+                return BadRequest();
+            }
+            await productService.PutProduct(id, product);
+            return NoContent();
         }
+
 
         [HttpPost]
-        public async Task<Result<Product>> PostProduct(Product product)
+        [Authorize(Roles = "admin")]
+        public async Task<ActionResult<Product>> PostProduct(Product product)
         {
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                return new Result<Product>
-                {
-                    Success=false,
-                    ResponseMessage="Enter correct data and try again",
-                };
+                return UnprocessableEntity(ModelState);
             }
-            return await productService.PostProduct(product);
+            else
+            {
+                await productService.PostProduct(product);
+                return Ok(product);
+            }
+
+            
         }
 
+
         [HttpDelete("{id}")]
-        public async Task<Result<Product>> DeleteProduct(Guid id)
+        [Authorize(Roles = "admin")]
+        public async Task<IActionResult> DeleteProduct(Guid id)
         {
-            return await productService.DeleteProduct(id);
+            var product = await productService.GetProduct(id);
+            if (product == null)
+            {
+                return NotFound("Sorry this product is not exist");
+            }
+            await productService.DeleteProduct(product);
+            return NoContent();
         }
 
        

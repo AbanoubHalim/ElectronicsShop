@@ -10,11 +10,11 @@ namespace ElectronicsShop.Services
 { 
     public interface ICategoryService
     {
-        Task<Result<List<Category>>> GetCategory();
-        Task<Result<Category>> GetCategory(Guid id);
-        Task<Result<Category>> PutCategory(Guid id, Category category);
-        Task<Result<Category>> PostCategory(Category category);
-        Task<Result<Category>> DeleteCategory(Guid id);
+        Task<IEnumerable<Category>> GetCategory();
+        Task<Category> GetCategory(Guid id);
+        Task PutCategory(Guid id, Category category);
+        Task PostCategory(Category category);
+        Task DeleteCategory(Category category);
     }
 
     public class CategoryService: ICategoryService
@@ -25,103 +25,34 @@ namespace ElectronicsShop.Services
             _context = context;
         }
 
-        public async Task<Result<Category>> DeleteCategory(Guid id)
+        public async Task DeleteCategory(Category category)
         {
-            var category = await _context.Category.SingleOrDefaultAsync(c=>c.CategoryId==id);
-            if (category == null)
-            {
-                return new Result<Category>
-                {
-                    Success = false,
-                    ResponseMessage = "There is no category with this id "
-                };
-            }
-            try
-            {
-                _context.Category.Remove(category);
-                await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                return new Result<Category>
-                {
-                    Success = false,
-                    ResponseMessage = ex.Message
-                };
-            }
-            return new Result<Category>
-            {
-                Success = true,
-                ResponseMessage = "Category Deleted Successfully",
-                ResponseObject = category
-            };
+            _context.Category.Remove(category);
+            await _context.SaveChangesAsync();
         }
 
-        public async Task<Result<List<Category>>> GetCategory()
+        public async Task<IEnumerable<Category>> GetCategory()
         {
-            List<Category> categories = await _context.Category.ToListAsync();
-            return new Result<List<Category>>
-            {
-                Success = true,
-                ResponseObject = categories,
-            };
+           return await _context.Category.ToListAsync();
         }
 
-        public async Task<Result<Category>> GetCategory(Guid id)
+        public async Task<Category> GetCategory(Guid id)
         {
-            Category category = await _context.Category.SingleOrDefaultAsync(c=>c.CategoryId==id);
-
-            if (category == null)
-            {
-                return new Result<Category>
-                {
-                    ResponseMessage = "Sorry There is no category with this id",
-                    Success = false,
-                };
-            }
-
-            return new Result<Category>
-            {
-                ResponseObject = category,
-                Success = true,
-            };
+            return await _context.Category.SingleOrDefaultAsync(c=>c.CategoryId==id);
         }
 
-        public async Task<Result<Category>> PostCategory(Category category)
+        public async Task PostCategory(Category category)
         {
             category.CategoryId = Guid.NewGuid();
             _context.Category.Add(category);
             await _context.SaveChangesAsync();
-
-            return new Result<Category>
-            {
-                ResponseMessage = "Category added successfully",
-                Success = true,
-                ResponseObject=category
-            };
         }
 
-        public async Task<Result<Category>> PutCategory(Guid id, Category category)
+        public async Task PutCategory(Guid id, Category category)
         {
-            try
-            {
                 var categoryData = _context.Category.SingleOrDefault(c => c.CategoryId == id);
                 categoryData.Name = category.Name;
                 await _context.SaveChangesAsync();
-            }
-            catch (Exception ex)
-            {
-                return new Result<Category>
-                {
-                    Success = false,
-                    ResponseMessage = ex.Message,
-                };
-            }
-            return new Result<Category>
-            {
-                Success = true,
-                ResponseMessage = "Category Update Successfuly",
-            };
         }
     }
 }

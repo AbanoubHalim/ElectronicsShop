@@ -20,15 +20,6 @@ namespace ElectronicsShop.Models
         [Required]
         public override string PhoneNumber { get => base.PhoneNumber; set => base.PhoneNumber = value; }
 
-        [Required]
-        [DataType(DataType.Password)]
-        public string Password { get; set; }
-
-        [Required]
-        [DataType(DataType.Password)]
-        [Display(Name = "Confirm Password")]
-        [Compare("Password", ErrorMessage = "Password and confirmation Password don't match")]
-        public string ConfirmPassword { get; set; }
 
         [Required]
         public string Address { get; set; }

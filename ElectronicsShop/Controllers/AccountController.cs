@@ -18,36 +18,41 @@ namespace ElectronicsShop.Controllers
     {
         private readonly UserManager<ApplicationUser> userManager;
         private readonly SignInManager<ApplicationUser> signInManager;
-        public AccountController(UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager)
+
+        public AccountController(UserManager<ApplicationUser> userManager,SignInManager<ApplicationUser> signInManager)
         {
             this.userManager = userManager;
             this.signInManager = signInManager;
         }
-        [HttpPost]
-        [AllowAnonymous]
+        [HttpPost("Register")]
         public async Task<Result<ApplicationUser>> Register(ApplicationUser applicationUser)
         {
-            
+            string errorMessage = "";
             if(ModelState.IsValid)
             {
                 applicationUser.UserName = applicationUser.Email;
-                var result = await userManager.CreateAsync(applicationUser, applicationUser.Password);
-                if(result.Succeeded)
+                var result = await userManager.CreateAsync(applicationUser, applicationUser.PasswordHash);
+                if (result.Succeeded)
                 {
                     await signInManager.SignInAsync(applicationUser, isPersistent: false);
                     return new Result<ApplicationUser>
                     {
                         Success = true,
-                        ResponseObject= applicationUser,
+                        ResponseObject = applicationUser,
                     };
                 }
-                foreach (var err in result.Errors)
+                else
                 {
-                    ModelState.AddModelError("", err.Description);
+                    foreach (var err in result.Errors)
+                    {
+                        errorMessage.Concat(err.Description + "   \n");
+                    }
+                    return new Result<ApplicationUser>
+                    {
+                        Success = false,
+                        ResponseMessage = errorMessage,
+                    };
                 }
-                
-
             }
             return new Result<ApplicationUser>
             {
@@ -57,11 +62,9 @@ namespace ElectronicsShop.Controllers
 
         }
 
-        [AllowAnonymous]
         [HttpPost("Login")]
-        public async Task<Result<LoginViewModel>> Login(LoginViewModel loginViewModel)
+        public async Task<Result<UserLogedIn>> Login(LoginViewModel loginViewModel)
         {
-
             if (ModelState.IsValid)
             {
                 var result = await signInManager.PasswordSignInAsync
@@ -69,25 +72,43 @@ namespace ElectronicsShop.Controllers
                      loginViewModel.RememberMe, false);
                 if (result.Succeeded)
                 {
-                    return new Result<LoginViewModel>
+                    ApplicationUser applicationUser =await userManager.FindByNameAsync(loginViewModel.Email);
+                    UserLogedIn user = new()
+                    {
+                        Name = applicationUser.Name,
+                        PhoneNumber = applicationUser.PhoneNumber,
+                        Address = applicationUser.Address,
+                        Email = applicationUser.Email,
+                        BirthDate = applicationUser.BirthDate
+                    };
+                    if (await userManager.IsInRoleAsync(applicationUser, "Admin"))
+                    {
+                        user.Role = "Admin";
+                    }
+                    else if (await userManager.IsInRoleAsync(applicationUser, "User"))
+                    {
+                        user.Role = "User";
+                    }
+                    return new Result<UserLogedIn>
                     {
                         Success = true,
-                        ResponseObject = loginViewModel,
+                        ResponseObject = user,
                     };
                 }
             }
-            return new Result<LoginViewModel>
+            return new Result<UserLogedIn>
             {
                 Success = false,
                 ResponseMessage = "Invalid Login",
             };
 
         }
+       
+        [Authorize]
         [HttpGet("Logout")]
-        public async Task<bool> Logout()
+        public async Task Logout()
         {
             await signInManager.SignOutAsync();
-            return true;
         }
 
 

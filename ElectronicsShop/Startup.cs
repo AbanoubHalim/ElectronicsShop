@@ -2,6 +2,7 @@ using ElectronicsShop.Models;
 using ElectronicsShop.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -30,20 +31,20 @@ namespace ElectronicsShop
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
+            services.AddDbContext<ShopContext>(options => options
+              .UseLazyLoadingProxies()
+              .UseSqlServer(Configuration.GetConnectionString("SystemConnection")
+          ));
             services.AddControllers();
             services.AddScoped<IOrderService, OrderService>();
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<IProductService, ProductService>();
             services.AddScoped<IDiscountService, DiscountService>();
-
-            services.AddDbContext<ShopContext>(options => options
-               .UseLazyLoadingProxies()
-               .UseSqlServer(Configuration.GetConnectionString("SystemConnection")
-           ));
-            
+            services.AddScoped<ISampleData, SampleData>();
             services.AddIdentity<ApplicationUser, IdentityRole>().AddEntityFrameworkStores<ShopContext>();
             services.AddCors();
+            services.AddControllers().AddJsonOptions(o => o.JsonSerializerOptions
+                .ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "ElectronicsShop", Version = "v1" });
@@ -51,7 +52,7 @@ namespace ElectronicsShop
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)//,ISampleData seeder)
         {
             if (env.IsDevelopment())
             {
@@ -60,6 +61,9 @@ namespace ElectronicsShop
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "ElectronicsShop v1"));
             }
 
+            //await seeder.CreateRole();
+           // await seeder.SeedAdminUser();
+            
             app.UseHttpsRedirection();
             app.UseDeveloperExceptionPage();
             app.UseRouting();
@@ -72,6 +76,12 @@ namespace ElectronicsShop
                 .AllowAnyMethod()
                 .AllowAnyHeader();
             });
+
+            app.UseCookiePolicy(
+    new CookiePolicyOptions
+    {
+        Secure = CookieSecurePolicy.Always
+    });
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();

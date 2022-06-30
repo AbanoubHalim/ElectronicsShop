@@ -8,9 +8,11 @@ using Microsoft.EntityFrameworkCore;
 using ElectronicsShop.Models;
 using ElectronicsShop.DTOs;
 using ElectronicsShop.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ElectronicsShop.Controllers
 {
+    [Authorize(Roles = "Admin")]
     [Route("api/[controller]")]
     [ApiController]
     public class CategoriesController : ControllerBase
@@ -21,52 +23,64 @@ namespace ElectronicsShop.Controllers
             this.categoryService = categoryService;
         }
 
-        [HttpGet]
-        public async Task<Result<List<Category>>> GetCategory()
+        [HttpGet("GetCategory")]
+        public async Task<ActionResult<IEnumerable<Category>>> GetCategory()
         {
-            return await categoryService.GetCategory();
+            var categories = await categoryService.GetCategory();
+            return Ok(categories);
         }
 
         [HttpGet("{id}")]
-        public async Task<Result<Category>> GetCategory(Guid id)
+        public async Task<ActionResult<Category>> GetCategory(Guid id)
         {
-            return await categoryService.GetCategory(id);
+            var category = await categoryService.GetCategory(id);
+            if (category == null)
+            {
+                return NotFound("There is no category with this id");
+            }
+            return category;
         }
         
         [HttpPut("{id}")]
-        public async Task<Result<Category>> PutCategory(Guid id, Category category)
+        public async Task<IActionResult> PutCategory(Guid id, Category category)
         {
-            if (!ModelState.IsValid)
+            var categorydata = await categoryService.GetCategory(id);
+            if (categorydata == null)
             {
-                return new Result<Category>
-                {
-                    Success = false,
-                    ResponseMessage= "Enter correct data and try again"
-                };
+                return NotFound("Sorry this category is not exist");
             }
-            return await categoryService.PutCategory(id, category);
+            else if (id != category.CategoryId)
+            {
+                return BadRequest("Id must be with Same value");
+            }
+            await categoryService.PutCategory(id, category);
+            return NoContent();
         }
 
         [HttpPost]
-        public async Task<Result<Category>> PostCategory(Category category)
+        public async Task<ActionResult<Category>> PostCategory(Category category)
         {
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                return new Result<Category>
-                {
-                    ResponseMessage = "Enter Correct Data and try again",
-                    Success=false
-                };
+                return UnprocessableEntity(ModelState);
             }
-            return await categoryService.PostCategory(category);
+            else
+            {
+                await categoryService.PostCategory(category);
+                return Ok(category);
+            }
         }
 
         [HttpDelete("{id}")]
-        public async Task<Result<Category>> DeleteCategory(Guid id)
+        public async Task<IActionResult> DeleteCategory(Guid id)
         {
-            return await categoryService.DeleteCategory(id);
+            var category = await categoryService.GetCategory(id);
+            if (category == null)
+            {
+                return NotFound("Sorry this category is not exist");
+            }
+            await categoryService.DeleteCategory(category);
+            return NoContent();
         }
-
-        
     }
 }

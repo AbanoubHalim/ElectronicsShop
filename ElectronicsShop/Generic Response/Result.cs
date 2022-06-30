@@ -13,5 +13,7 @@ namespace ElectronicsShop.DTOs
 
         public string ResponseMessage { get; set; }
 
+        public int Count { get; set; }
+
     }
 }

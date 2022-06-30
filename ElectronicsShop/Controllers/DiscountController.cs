@@ -8,9 +8,11 @@ using Microsoft.EntityFrameworkCore;
 using ElectronicsShop.Models;
 using ElectronicsShop.Services;
 using ElectronicsShop.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ElectronicsShop.Controllers
 {
+    [Authorize(Roles = "Admin")]
     [Route("api/[controller]")]
     [ApiController]
     public class DiscountController : ControllerBase
@@ -22,45 +24,51 @@ namespace ElectronicsShop.Controllers
         }
 
         [HttpGet("{productId}")]
-        public async Task<Result<Discount>> GetDiscount(Guid productId)
+        public async Task<ActionResult<Discount>> GetDiscount(Guid productId)
         {
             return await discountService.GetDiscount(productId);
         }
 
         [HttpPut("{productId}")]
-        public async Task<Result<Discount>> PutDiscount(Guid productId, Discount discount)
+        public async Task<ActionResult<Discount>> PutDiscount(Guid productId, Discount discount)
         {
-            if(!ModelState.IsValid)
+            var discountData = await discountService.GetDiscount(productId);
+            if (discountData == null)
             {
-                return new Result<Discount>
-                {
-                    ResponseMessage = "Enter correct data and try again",
-                    Success = false,
-                };
+                return NotFound("Sorry this discount is not exist");
             }
-            return await discountService.PutDiscount(productId, discount);
+            else if (productId != discount.ProductId)
+            {
+                return BadRequest();
+            }
+            await discountService.PutDiscount(productId, discount);
+            return NoContent();           
         }
 
         [HttpPost]
-        public async Task<Result<Discount>> PostDiscount(Discount discount)
+        public async Task<ActionResult<Discount>> PostDiscount(Discount discount)
         {
-            if(!ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                return new Result<Discount>
-                {
-                    ResponseMessage = "Enter correct data and try again",
-                    Success = false,
-                };
+                return UnprocessableEntity(ModelState);
             }
-
-            return await discountService.PostDiscount(discount);
+            else
+            {
+                await discountService.PostDiscount(discount);
+                return Ok(discount);
+            }
         }
 
-        // DELETE: api/Discount/5
         [HttpDelete("{productId}")]
-        public async Task<Result<Discount>> DeleteProductDiscount(Guid productId)
+        public async Task<ActionResult<Discount>> DeleteProductDiscount(Guid productId)
         {
-            return await discountService.DeleteProductDiscount(productId);
+            var discount = await discountService.GetDiscount(productId);
+            if (discount == null)
+            {
+                return NotFound("Sorry this order is not exist");
+            }
+            await discountService.DeleteProductDiscount(discount);
+            return NoContent();
         }
 
       
